@@ -89,21 +89,3 @@ Automated review system/
 ```
 
 ---
-
-## 📤 Submission Instructions (Deadline: 6:00 PM)
-
-1. **Push to your GitHub repository**:
-   ```bash
-   git init
-   git add .
-   git commit -m "feat: Automated Intern Review, Allocation & Evaluation System"
-   git remote add origin https://github.com/<your-username>/<your-repo-name>.git
-   git branch -M main
-   git push -u origin main
-   ```
-
-2. **Record Screen Video**: Follow [`DEMO_WALKTHROUGH.md`](file:///e:/Automated%20review%20system/DEMO_WALKTHROUGH.md) for a seamless 2-minute walkthrough.
-3. **Upload Video to Google Drive** (ensure link sharing is set to *Anyone with the link can view*).
-4. **Fill the College Excel Sheet**:
-   - Column 1: GitHub Repository Link
-   - Column 2: Google Drive Video Link
