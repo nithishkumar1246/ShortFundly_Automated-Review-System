@@ -96,6 +96,27 @@ html.light #modal-certificate .bg-darkbg-900,
 html.light #modal-certificate .bg-darkbg-950,
 html.light #modal-register .bg-darkbg-900 {
     background-color: #ffffff !important;
+    border-color: #e2e8f0 !important;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15) !important;
+}
+html.light #modal-register h3,
+html.light #modal-certificate h3 {
+    color: #0f172a !important;
+}
+html.light #modal-register label {
+    color: #334155 !important;
+}
+html.light #modal-register p {
+    color: #64748b !important;
+}
+html.light #modal-register input {
+    background-color: #f8fafc !important;
+    color: #0f172a !important;
+    border-color: #cbd5e1 !important;
+}
+html.light #modal-register input:focus {
+    border-color: #6366f1 !important;
+    background-color: #ffffff !important;
 }
 html.light .timeline-line {
     background: #cbd5e1 !important;

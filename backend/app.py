@@ -40,7 +40,7 @@ class VerifyInternRequest(BaseModel):
 
 class RegisterInternRequest(BaseModel):
     name: str
-    email: str
+    email: Optional[str] = None
     role: str = "Software Engineering Intern"
     department: str = "Cloud & AI Platforms"
     doj: Optional[str] = None
@@ -138,20 +138,41 @@ def verify_intern(req: VerifyInternRequest):
 @app.post("/api/interns/register")
 def register_intern(req: RegisterInternRequest):
     """Registers a new intern and dynamically schedules N reviews with strict 10-15 day gaps starting from DOJ."""
+    clean_name = req.name.strip()
+    if not clean_name:
+        raise HTTPException(status_code=400, detail="Intern name cannot be empty.")
+
+    # Clean email or generate default
+    if req.email and req.email.strip():
+        clean_email = req.email.strip()
+    else:
+        normalized_name = "".join(c for c in clean_name.lower().replace(" ", ".") if c.isalnum() or c == ".")
+        clean_email = f"{normalized_name}@student.nexus.io"
+
     conn = get_connection()
     cursor = conn.cursor()
 
-    # Generate intern ID
-    cursor.execute("SELECT COUNT(*) FROM interns")
-    count = cursor.fetchone()[0] + 1
-    intern_id = f"INT-{100 + count}"
+    # Generate unique intern ID reliably by inspecting max existing numeric suffix
+    cursor.execute("SELECT intern_id FROM interns")
+    rows = cursor.fetchall()
+    existing_nums = []
+    for r in rows:
+        val = r["intern_id"] if isinstance(r, dict) or hasattr(r, "keys") else r[0]
+        if val and isinstance(val, str) and val.startswith("INT-"):
+            try:
+                existing_nums.append(int(val.split("-")[1]))
+            except (ValueError, IndexError):
+                pass
+    next_num = max(existing_nums, default=100) + 1
+    intern_id = f"INT-{next_num}"
 
     # DOJ defaults to today if not provided
-    doj_str = req.doj if req.doj else datetime.date.today().strftime("%Y-%m-%d")
+    doj_str = req.doj.strip() if req.doj and req.doj.strip() else datetime.date.today().strftime("%Y-%m-%d")
     now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     # Gap strictly clamped to 10-15
-    gap = max(10, min(15, req.gap_days))
+    gap = max(10, min(15, req.gap_days if req.gap_days else 12))
+    reviews_count = max(2, min(8, req.total_reviews if req.total_reviews else 4))
 
     try:
         cursor.execute("""
@@ -159,12 +180,13 @@ def register_intern(req: RegisterInternRequest):
             intern_id, name, email, role, department, doj, mentor_name, mentor_email, current_review_stage, total_reviews, status, created_at
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
-            intern_id, req.name, req.email, req.role, req.department,
-            doj_str, req.mentor_name, req.mentor_email, 1, req.total_reviews, "ACTIVE", now_str
+            intern_id, clean_name, clean_email, req.role.strip() or "Software Engineering Intern",
+            req.department.strip() or "Cloud & AI Platforms",
+            doj_str, req.mentor_name, req.mentor_email, 1, reviews_count, "ACTIVE", now_str
         ))
 
         # Dynamically compute review schedule
-        schedule = calculate_review_schedule(doj_str, total_reviews=req.total_reviews, preferred_gap_days=gap)
+        schedule = calculate_review_schedule(doj_str, total_reviews=reviews_count, preferred_gap_days=gap)
         for stage in schedule:
             cursor.execute("""
             INSERT INTO review_schedules (
@@ -191,16 +213,19 @@ def register_intern(req: RegisterInternRequest):
     task_row = cursor.fetchone()
     task_details = dict(task_row) if task_row else None
 
-    # Auto-dispatch initial Review 1 invitation email
+    # Auto-dispatch initial Review 1 invitation email (safely, won't break registration if email service has network hiccups)
     if schedules and task_details:
-        dispatch_onboarding_invitation_email(
-            intern_id=intern_id,
-            intern_name=req.name,
-            recipient_email=req.email,
-            doj=doj_str,
-            first_review=schedules[0],
-            master_task=task_details
-        )
+        try:
+            dispatch_onboarding_invitation_email(
+                intern_id=intern_id,
+                intern_name=clean_name,
+                recipient_email=clean_email,
+                doj=doj_str,
+                first_review=schedules[0],
+                master_task=task_details
+            )
+        except Exception as dispatch_err:
+            print(f"[ONBOARDING INVITATION NOTICE] Email dispatch notice for {intern_id}: {dispatch_err}")
 
     conn.close()
 

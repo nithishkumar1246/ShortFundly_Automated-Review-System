@@ -44,7 +44,7 @@ def init_db():
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         intern_id TEXT UNIQUE NOT NULL,
         name TEXT NOT NULL,
-        email TEXT UNIQUE NOT NULL,
+        email TEXT NOT NULL,
         role TEXT NOT NULL,
         department TEXT NOT NULL,
         doj TEXT NOT NULL,

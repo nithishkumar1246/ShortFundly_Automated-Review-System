@@ -167,22 +167,25 @@ async function verifyInternByName(nameQuery) {
 
         if (!res.ok) {
             const err = await res.json();
+            const cleanQuery = nameQuery.trim();
+            const safeQuery = escapeHtml(cleanQuery).replace(/'/g, "\\'");
             appendBotMessage(`
-                <div class="space-y-2">
+                <div class="space-y-3">
                     <div class="text-amber-400 font-bold flex items-center gap-1.5 text-xs">
                         <i data-lucide="alert-circle" class="w-4 h-4"></i>
-                        <span>Intern Record Not Found</span>
+                        <span>Student Record Not Found: "${escapeHtml(cleanQuery)}"</span>
                     </div>
-                    <p class="text-xs text-slate-300">
-                        Could not find an intern record matching "<strong>${escapeHtml(nameQuery)}</strong>".
+                    <p class="text-xs text-slate-300 leading-relaxed">
+                        No active profile found for <strong>${escapeHtml(cleanQuery)}</strong>. Would you like to register this student now?
                     </p>
-                    <p class="text-[11px] text-slate-400">
-                        Please check spelling, select from registered interns below, or register as a new candidate:
-                    </p>
-                    <div class="pt-1 flex items-center gap-2">
-                        <button onclick="openRegistrationModal('${escapeHtml(nameQuery)}')" class="bg-brand-600 hover:bg-brand-500 text-white font-bold px-3 py-1.5 rounded-lg text-xs flex items-center gap-1 shadow">
-                            <i data-lucide="user-plus" class="w-3.5 h-3.5"></i>
-                            <span>Register as New Intern</span>
+                    <div class="pt-1 flex flex-wrap items-center gap-2">
+                        <button onclick="quickRegisterStudent('${safeQuery}')" class="bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white font-bold px-3.5 py-1.5 rounded-lg text-xs flex items-center gap-1.5 shadow-md shadow-brand-500/20 transition-all">
+                            <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+                            <span>⚡ Quick Register "${escapeHtml(cleanQuery)}" (1-Click)</span>
+                        </button>
+                        <button onclick="openRegistrationModal('${safeQuery}')" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700/80 font-medium px-3 py-1.5 rounded-lg text-xs flex items-center gap-1.5 transition-all">
+                            <i data-lucide="edit-3" class="w-3.5 h-3.5 text-slate-400"></i>
+                            <span>Customize Details</span>
                         </button>
                     </div>
                 </div>
@@ -455,11 +458,8 @@ async function handleChatSubmit(e) {
         showTypingIndicator();
         setTimeout(async () => {
             hideTypingIndicator();
-            const verified = await verifyInternByName(query);
-            if (!verified) {
-                appendBotMessage(`💡 If you want to evaluate your work, please paste your GitHub repository link (e.g. <code class="text-brand-300">https://github.com/intern/my-repo</code>).`);
-            }
-        }, 400);
+            await verifyInternByName(query);
+        }, 350);
         return;
     }
 
@@ -1488,8 +1488,52 @@ async function resetCurrentInternProgress() {
 }
 
 // -------------------------------------------------------------
-// REGISTRATION MODAL
+// REGISTRATION (1-Click Quick Register & Modal)
 // -------------------------------------------------------------
+async function quickRegisterStudent(name) {
+    if (!name || !name.trim()) return;
+    const cleanName = name.trim();
+    showTypingIndicator();
+
+    try {
+        const res = await fetch('/api/interns/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                name: cleanName,
+                role: 'Software Engineering Intern',
+                department: 'Engineering',
+                total_reviews: 4,
+                gap_days: 12
+            })
+        });
+
+        hideTypingIndicator();
+
+        if (!res.ok) {
+            const err = await res.json();
+            appendBotMessage(`⚠️ Could not register student "${escapeHtml(cleanName)}": ${err.detail || 'Server error'}`);
+            return;
+        }
+
+        const data = await res.json();
+        state.currentIntern = data.intern;
+        state.masterTask = data.assigned_task;
+        state.reviewSchedule = data.review_schedule;
+
+        updateInternProfileUI();
+        renderTimelineRoadmap();
+        switchView('chat');
+        displayWelcomeAndTaskBriefing(data.message);
+        await loadEmailLogs();
+
+    } catch (err) {
+        hideTypingIndicator();
+        console.error(err);
+        appendBotMessage(`⚠️ Network error occurred while registering "${escapeHtml(cleanName)}".`);
+    }
+}
+
 function openRegistrationModal(prefillName) {
     document.getElementById('modal-register').classList.remove('hidden');
     // Set default DOJ to today
@@ -1498,7 +1542,13 @@ function openRegistrationModal(prefillName) {
         const nameField = document.getElementById('reg-name');
         if (nameField) nameField.value = prefillName;
         const emailField = document.getElementById('reg-email');
-        if (emailField) emailField.focus();
+        if (emailField) {
+            const norm = prefillName.toLowerCase().replace(/[^a-z0-9]/g, '.').replace(/\.+/g, '.');
+            if (!emailField.value || emailField.value.includes('@nexusinnovations.tech')) {
+                emailField.value = `${norm}@gmail.com`;
+            }
+            emailField.focus();
+        }
     }
     lucide.createIcons();
 }
@@ -1509,14 +1559,29 @@ function closeRegistrationModal() {
 
 async function handleInternRegistration(e) {
     e.preventDefault();
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    const origBtnText = submitBtn ? submitBtn.innerHTML : '';
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerText = 'Registering & Scheduling...';
+    }
+
+    const nameVal = document.getElementById('reg-name').value.trim();
+    const emailVal = document.getElementById('reg-email').value.trim();
+    const roleVal = document.getElementById('reg-role').value.trim() || 'Software Engineering Intern';
+    const deptVal = document.getElementById('reg-dept').value.trim() || 'Engineering';
+    const dojVal = document.getElementById('reg-doj').value || new Date().toISOString().split('T')[0];
+    const totalReviewsVal = parseInt(document.getElementById('reg-total-reviews').value) || 4;
+    const gapDaysVal = parseInt(document.getElementById('reg-gap-days').value) || 12;
+
     const payload = {
-        name: document.getElementById('reg-name').value.trim(),
-        email: document.getElementById('reg-email').value.trim(),
-        role: document.getElementById('reg-role').value.trim(),
-        department: document.getElementById('reg-dept').value.trim(),
-        doj: document.getElementById('reg-doj').value,
-        total_reviews: parseInt(document.getElementById('reg-total-reviews').value),
-        gap_days: parseInt(document.getElementById('reg-gap-days').value)
+        name: nameVal,
+        email: emailVal,
+        role: roleVal,
+        department: deptVal,
+        doj: dojVal,
+        total_reviews: totalReviewsVal,
+        gap_days: gapDaysVal
     };
 
     try {
@@ -1528,7 +1593,11 @@ async function handleInternRegistration(e) {
 
         if (!res.ok) {
             const err = await res.json();
-            alert(`Registration failed: ${err.detail}`);
+            alert(`Registration failed: ${err.detail || 'Could not save student profile.'}`);
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = origBtnText;
+            }
             return;
         }
 
@@ -1542,9 +1611,15 @@ async function handleInternRegistration(e) {
         renderTimelineRoadmap();
         switchView('chat');
         displayWelcomeAndTaskBriefing(data.message);
+        await loadEmailLogs();
 
     } catch (err) {
-        alert("Registration network error.");
+        alert("Registration network error. Please verify the server is running.");
+    } finally {
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = origBtnText;
+        }
     }
 }
 
