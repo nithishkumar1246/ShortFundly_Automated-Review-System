@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nexus Review AI - Automated Intern Review, Allocation & Evaluation System</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#eef2ff',
+                            100: '#e0e7ff',
+                            400: '#818cf8',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                            900: '#1e1b4b',
+                        },
+                        darkbg: {
+                            800: '#131b2e',
+                            850: '#0f172a',
+                            900: '#0a0f1d',
+                            950: '#060913',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Outfit', 'Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body class="bg-darkbg-950 text-slate-100 font-sans min-h-screen flex flex-col antialiased selection:bg-brand-500 selection:text-white">
+
+    <!-- Top Navigation Header -->
+    <header class="sticky top-0 z-40 bg-darkbg-900/90 backdrop-blur-md border-b border-slate-800/80 px-4 lg:px-8 py-3.5 transition-all">
+        <div class="max-w-7xl mx-auto flex items-center justify-between">
+            <!-- Brand -->
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 via-indigo-500 to-purple-500 flex items-center justify-center shadow-lg shadow-brand-500/20 text-white font-extrabold text-lg">
+                    <i data-lucide="bot" class="w-5 h-5"></i>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <span class="font-extrabold text-lg tracking-tight bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent">Nexus Review AI</span>
+                        <span class="text-[10px] px-2 py-0.5 rounded-full font-bold bg-brand-500/20 text-brand-400 border border-brand-500/30">v2.5 PROD</span>
+                    </div>
+                    <p class="text-[11px] text-slate-400 font-medium hidden sm:block">Automated Intern Review, Task Allocation &amp; Evaluation System</p>
+                </div>
+            </div>
+
+            <!-- View Switcher Tabs -->
+            <nav class="flex items-center bg-slate-900/80 p-1 rounded-xl border border-slate-800 shadow-inner">
+                <button id="tab-btn-chat" onclick="switchView('chat')" class="flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all bg-brand-600 text-white shadow-sm">
+                    <i data-lucide="message-square" class="w-4 h-4"></i>
+                    <span>Intern Bot &amp; Portal</span>
+                </button>
+                <button id="tab-btn-inbox" onclick="switchView('inbox')" class="flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-slate-200 transition-all">
+                    <i data-lucide="mail" class="w-4 h-4"></i>
+                    <span>Email Dispatch Logs</span>
+                    <span id="badge-email-count" class="px-1.5 py-0.2 rounded-full text-[10px] bg-indigo-500/30 text-indigo-300 font-bold">0</span>
+                </button>
+                <button id="tab-btn-admin" onclick="switchView('admin')" class="flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-slate-200 transition-all">
+                    <i data-lucide="shield-check" class="w-4 h-4"></i>
+                    <span>Admin Dashboard</span>
+                </button>
+            </nav>
+
+            <!-- Quick Intern Info Pill / Reset -->
+            <div class="flex items-center gap-3">
+                <div id="header-user-pill" class="hidden sm:flex items-center gap-2 bg-slate-900/80 border border-slate-800 rounded-full px-3 py-1 text-xs">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <span id="header-user-name" class="font-medium text-slate-300">Guest</span>
+                    <span id="header-user-stage" class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-brand-500/20 text-brand-300">Stage 1</span>
+                </div>
+                <button onclick="openRegistrationModal()" class="flex items-center gap-1.5 text-xs font-medium text-slate-400 hover:text-white bg-slate-800/80 hover:bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700/80 transition-all">
+                    <i data-lucide="user-plus" class="w-3.5 h-3.5"></i>
+                    <span>Register Intern</span>
+                </button>
+                <!-- Light / Dark Mode Toggle -->
+                <button id="btn-theme-toggle" onclick="toggleTheme()" title="Toggle Light / Dark Mode"
+                    class="flex items-center justify-center w-8 h-8 rounded-lg bg-slate-800/80 hover:bg-slate-700 border border-slate-700/80 text-slate-400 hover:text-white transition-all">
+                    <i data-lucide="sun" id="theme-icon-sun" class="w-4 h-4 hidden"></i>
+                    <i data-lucide="moon" id="theme-icon-moon" class="w-4 h-4"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Workspace Container -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-4 lg:p-6 flex flex-col">
+        
+        <!-- ========================================== -->
+        <!-- VIEW 1: INTERN CHATBOT & REVIEW WORKSPACE -->
+        <!-- ========================================== -->
+        <div id="view-chat" class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-5 h-full">
+            
+            <!-- Left Column: Intern Context & Review Timeline (4 cols on lg) -->
+            <div class="lg:col-span-4 flex flex-col gap-4">
+                
+                <!-- Intern Profile & DOJ Card -->
+                <div class="bg-darkbg-900/80 rounded-2xl border border-slate-800/90 p-4 sm:p-5 shadow-xl relative overflow-hidden group">
+                    <div class="absolute -right-10 -top-10 w-32 h-32 bg-brand-500/10 rounded-full blur-2xl pointer-events-none"></div>
+                    
+                    <div class="flex items-start justify-between mb-3">
+                        <div class="flex items-center gap-3">
+                            <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-lg shadow-md">
+                                <span id="intern-avatar-initials">?</span>
+                            </div>
+                            <div>
+                                <h2 id="intern-card-name" class="font-bold text-base text-white flex items-center gap-2">
+                                    <span>Welcome, Intern</span>
+                                    <span id="intern-status-badge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700">AWAITING IDENTIFICATION</span>
+                                </h2>
+                                <p id="intern-card-role" class="text-xs text-slate-400">Please enter your name in chat to begin</p>
+                            </div>
+                        </div>
+                        <button onclick="resetCurrentInternProgress()" title="Reset to Stage 1 for interactive testing" class="text-slate-500 hover:text-amber-400 p-1.5 rounded-lg hover:bg-slate-800 transition-colors">
+                            <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+
+                    <!-- Verified DOJ Banner (Core Requirement 1) -->
+                    <div class="bg-gradient-to-r from-brand-900/60 to-purple-950/40 rounded-xl p-3 border border-brand-500/20 mb-3.5">
+                        <div class="flex items-center justify-between text-xs">
+                            <span class="text-slate-300 flex items-center gap-1.5 font-medium">
+                                <i data-lucide="calendar-check-2" class="w-4 h-4 text-emerald-400"></i>
+                                Verified Date of Joining (DOJ):
+                            </span>
+                            <span id="intern-card-doj" class="font-bold text-slate-400 font-mono text-xs">Pending Verification</span>
+                        </div>
+                        <div class="mt-2 text-[11px] text-slate-400 flex items-center justify-between border-t border-slate-700/50 pt-2">
+                            <span>Intern ID: <strong id="intern-card-id" class="text-slate-400 font-mono">----</strong></span>
+                            <span>Dept: <strong id="intern-card-dept" class="text-slate-400">Engineering</strong></span>
+                        </div>
+                    </div>
+
+                    <!-- Mentor Info -->
+                    <div class="flex items-center justify-between text-xs text-slate-400 bg-slate-900/70 rounded-lg p-2.5 border border-slate-800">
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="user-check" class="w-4 h-4 text-indigo-400"></i>
+                            <span>Assigned Mentor:</span>
+                        </div>
+                        <span id="intern-card-mentor" class="font-medium text-slate-400">Assigned after verification</span>
+                    </div>
+                </div>
+
+                <!-- Dynamic N-Review Stepper (Core Requirement 3) -->
+                <div class="bg-darkbg-900/80 rounded-2xl border border-slate-800/90 p-4 sm:p-5 shadow-xl flex flex-col">
+                    <div class="flex items-center justify-between mb-3.5">
+                        <div class="flex items-center gap-2">
+                            <div class="w-7 h-7 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center">
+                                <i data-lucide="calendar-range" class="w-4 h-4"></i>
+                            </div>
+                            <h3 class="font-bold text-sm text-white">Dynamic Review Roadmap</h3>
+                        </div>
+                        <span id="timeline-stage-summary" class="text-[11px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
+                            Strict 12-Day Intervals
+                        </span>
+                    </div>
+
+                    <!-- Review stages container: hugs cards snugly without empty void -->
+                    <div id="timeline-container" class="space-y-2.5 overflow-y-auto max-h-[460px] pr-1.5 custom-scrollbar">
+                        <div class="p-6 text-center text-xs text-slate-400 border border-dashed border-slate-800 rounded-xl bg-slate-900/30">
+                            <div class="w-10 h-10 rounded-full bg-slate-800 text-brand-400 flex items-center justify-center mx-auto mb-2.5">
+                                <i data-lucide="user" class="w-5 h-5"></i>
+                            </div>
+                            <div class="font-bold text-white text-xs">Awaiting Intern Name</div>
+                            <p class="text-[11px] text-slate-500 mt-1 max-w-[220px] mx-auto leading-relaxed">
+                                Type your full name in the chat to load your official review milestones &amp; schedule.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Completion Certificate button (shown when intern completes all reviews) -->
+                    <div id="certificate-unlock-box" class="hidden mt-4 pt-3 border-t border-slate-800">
+                        <button onclick="openCertificateModal()" class="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-extrabold px-4 py-2.5 rounded-xl shadow-lg shadow-amber-500/20 text-xs transition-all">
+                            <i data-lucide="award" class="w-4 h-4"></i>
+                            <span>View Official Internship Certificate</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Conversational AI Review Bot (8 cols on lg) -->
+            <div class="lg:col-span-8 flex flex-col bg-darkbg-900/90 rounded-2xl border border-slate-800 shadow-2xl overflow-hidden h-[750px] lg:h-full">
+                
+                <!-- Chat Window Header -->
+                <div class="px-5 py-3.5 bg-darkbg-850 border-b border-slate-800 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="relative">
+                            <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-600 to-purple-500 flex items-center justify-center text-white">
+                                <i data-lucide="bot" class="w-5 h-5"></i>
+                            </div>
+                            <span class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 ring-2 ring-darkbg-850"></span>
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <h3 class="font-bold text-sm text-white">Review &amp; Allocation AI Bot</h3>
+                                <span class="text-[10px] bg-brand-500/20 text-brand-300 px-2 py-0.2 rounded font-semibold border border-brand-500/30">Active AI Agent</span>
+                            </div>
+                            <p class="text-[11px] text-slate-400">Verifies DOJ &bull; Explains Task &bull; Schedules N-Reviews &bull; Evaluates GitHub &bull; Dispatches Email</p>
+                        </div>
+                    </div>
+
+                    <!-- Header Actions: TTS & Stage 1 Invite Email Dispatch -->
+                    <div class="flex items-center gap-2">
+                        <button id="btn-send-invitation" onclick="dispatchStage1InvitationEmail()" class="flex items-center gap-1.5 bg-indigo-950/70 hover:bg-indigo-900/90 text-indigo-300 hover:text-white px-3 py-1.5 rounded-xl border border-indigo-500/30 text-xs font-semibold transition-all shadow-sm" title="Dispatch First Review Invitation Email">
+                            <i data-lucide="mail" class="w-3.5 h-3.5"></i>
+                            <span class="hidden sm:inline">Send Review 1 Invite</span>
+                        </button>
+                        <button id="btn-tts-toggle" onclick="toggleTaskAudioBriefing()" class="flex items-center gap-2 bg-slate-800/90 hover:bg-slate-700/90 text-slate-200 px-3 py-1.5 rounded-xl border border-slate-700 text-xs font-medium transition-all shadow-sm">
+                            <i data-lucide="volume-2" id="tts-icon" class="w-3.5 h-3.5 text-brand-400"></i>
+                            <span id="tts-label">Listen Briefing</span>
+                            <div id="tts-wave" class="hidden flex items-center gap-0.5 ml-1">
+                                <span class="w-0.5 h-3 bg-brand-400 animate-pulse"></span>
+                                <span class="w-0.5 h-4 bg-brand-400 animate-pulse delay-75"></span>
+                                <span class="w-0.5 h-2 bg-brand-400 animate-pulse delay-150"></span>
+                            </div>
+                        </button>
+                        <!-- Neural Voice Selector -->
+                        <select id="tts-voice-select" title="Select Neural Voice"
+                            class="text-[11px] bg-slate-900/80 border border-slate-700 rounded-lg px-2 py-1.5 text-slate-300 focus:outline-none focus:border-brand-500 transition-all cursor-pointer hidden sm:block">
+                            <option value="en-US-AriaNeural">Aria (US ♀ Warm)</option>
+                            <option value="en-US-JennyNeural">Jenny (US ♀ Friendly)</option>
+                            <option value="en-US-GuyNeural">Guy (US ♂ Pro)</option>
+                            <option value="en-GB-SoniaNeural">Sonia (UK ♀ Crisp)</option>
+                            <option value="en-IN-NeerjaNeural">Neerja (IN ♀)</option>
+                            <option value="en-US-DavisNeural">Davis (US ♂ Casual)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Chat Messages Stream -->
+                <div id="chat-messages-container" class="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 custom-scrollbar">
+                    <!-- Messages will be dynamically rendered here -->
+                </div>
+
+                <!-- Quick Action Chips for Fast Interactive Testing -->
+                <div class="px-5 py-2 bg-slate-900/60 border-t border-slate-800/80 flex items-center gap-2 overflow-x-auto text-xs whitespace-nowrap custom-scrollbar">
+                    <span class="text-[11px] text-slate-500 font-medium">Quick select:</span>
+                    <button onclick="quickSelectIntern('Nithish Kumar M')" class="px-2.5 py-1 rounded-lg bg-emerald-950/60 hover:bg-emerald-900/80 text-emerald-300 border border-emerald-500/30 text-[11px] transition-colors flex items-center gap-1">
+                        👤 Nithish Kumar M (INT-104)
+                    </button>
+                    <button onclick="quickSelectIntern('Aarav Sharma')" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-750 text-slate-300 border border-slate-700 hover:border-brand-500/50 text-[11px] transition-colors">
+                        👤 Aarav Sharma (INT-101)
+                    </button>
+                    <button onclick="quickSelectIntern('Priya Patel')" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-750 text-slate-300 border border-slate-700 hover:border-brand-500/50 text-[11px] transition-colors">
+                        👤 Priya Patel (INT-102)
+                    </button>
+                    <button onclick="quickSelectIntern('Marcus Vance')" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-750 text-slate-300 border border-slate-700 hover:border-brand-500/50 text-[11px] transition-colors">
+                        👤 Marcus Vance (INT-103)
+                    </button>
+                    <span class="text-slate-600">|</span>
+                    <button onclick="quickFillGithub('https://github.com/aarav-sharma/cloud-microservices-ai')" class="px-2.5 py-1 rounded-lg bg-brand-950/60 hover:bg-brand-900/80 text-brand-300 border border-brand-500/30 text-[11px] transition-colors flex items-center gap-1">
+                        <i data-lucide="github" class="w-3 h-3"></i> Autofill GitHub URL
+                    </button>
+                    <button onclick="quickUploadSampleArchive()" class="px-2.5 py-1 rounded-lg bg-indigo-950/60 hover:bg-indigo-900/80 text-indigo-300 border border-indigo-500/30 text-[11px] transition-colors flex items-center gap-1">
+                        <i data-lucide="file-archive" class="w-3 h-3"></i> Quick Upload Code Archive (.zip)
+                    </button>
+                </div>
+
+                <!-- Chat Input Form & File Attachment -->
+                <div class="p-3 sm:p-4 bg-darkbg-850 border-t border-slate-800">
+                    <!-- File Upload Preview Bar (shown when file is selected) -->
+                    <div id="file-upload-preview-bar" class="hidden mb-2.5 px-3 py-2 rounded-xl bg-gradient-to-r from-indigo-950/90 to-brand-950/80 border border-indigo-500/40 flex items-center justify-between text-xs shadow-md">
+                        <div class="flex items-center gap-2 text-indigo-200 truncate">
+                            <i data-lucide="file-code" class="w-4 h-4 text-brand-400 shrink-0"></i>
+                            <span class="truncate">Selected: <strong id="preview-file-name" class="text-white font-mono">code_submission.zip</strong> (<span id="preview-file-size" class="text-slate-400">0 KB</span>)</span>
+                        </div>
+                        <div class="flex items-center gap-2 shrink-0">
+                            <button type="button" onclick="cancelSelectedFile()" class="text-slate-400 hover:text-red-400 text-xs p-1" title="Cancel upload">
+                                <i data-lucide="x" class="w-4 h-4"></i>
+                            </button>
+                            <button type="button" onclick="submitUploadedDocument()" class="bg-brand-600 hover:bg-brand-500 text-white font-bold px-3 py-1 rounded-lg text-xs flex items-center gap-1 shadow-sm">
+                                <span>Evaluate Document</span>
+                                <i data-lucide="arrow-up-right" class="w-3.5 h-3.5"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <form id="chat-input-form" onsubmit="handleChatSubmit(event)" class="relative flex items-center gap-2">
+                        <!-- Paperclip File Upload Button -->
+                        <label for="doc-file-input" title="Upload task document or code archive (.zip, .py, .js, .pdf, .docx, .txt)" class="cursor-pointer bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white p-3 rounded-xl border border-slate-700/80 transition-all flex items-center justify-center shrink-0">
+                            <i data-lucide="paperclip" class="w-4 h-4 text-brand-400"></i>
+                            <input type="file" id="doc-file-input" onchange="handleFileSelected(event)" class="hidden" accept=".zip,.py,.js,.ts,.html,.css,.json,.txt,.md,.pdf,.docx,.tar.gz" />
+                        </label>
+
+                        <div class="relative flex-1">
+                            <input 
+                                type="text" 
+                                id="chat-input-field" 
+                                placeholder="Enter your name, paste a GitHub repo link, or attach a document..." 
+                                class="w-full bg-slate-900/90 text-slate-100 placeholder-slate-500 rounded-xl pl-4 pr-10 py-3 text-sm border border-slate-700/80 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all shadow-inner"
+                                autocomplete="off"
+                            />
+                            <div class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none">
+                                <i data-lucide="terminal" class="w-4 h-4"></i>
+                            </div>
+                        </div>
+                        <button 
+                            type="submit" 
+                            id="btn-chat-send"
+                            class="bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white font-bold p-3 rounded-xl shadow-lg shadow-brand-500/20 transition-all flex items-center justify-center"
+                        >
+                            <i data-lucide="send" class="w-4 h-4"></i>
+                        </button>
+                    </form>
+                    <div class="flex items-center justify-between text-[11px] text-slate-500 mt-2 px-1">
+                        <span>💡 Tip: Submit via <strong>GitHub Link</strong> or click <i data-lucide="paperclip" class="w-3 h-3 inline text-brand-400"></i> to upload a <strong>Task Document / Code Archive (.zip)</strong>.</span>
+                        <span id="system-status-indicator" class="flex items-center gap-1 text-emerald-400">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                            AI Engine Online
+                        </span>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- ========================================== -->
+        <!-- VIEW 2: EMAIL DISPATCH LOGS & SIMULATOR   -->
+        <!-- ========================================== -->
+        <div id="view-inbox" class="hidden flex-1 grid grid-cols-1 lg:grid-cols-12 gap-5 h-full">
+            
+            <!-- Email list (4 cols) -->
+            <div class="lg:col-span-4 bg-darkbg-900/80 rounded-2xl border border-slate-800 p-4 flex flex-col h-[750px] lg:h-full">
+                <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-3">
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="inbox" class="w-4 h-4 text-indigo-400"></i>
+                        <h3 class="font-bold text-sm text-white">Dispatched Dual-Emails</h3>
+                    </div>
+                    <button onclick="loadEmailLogs()" class="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-slate-200">
+                        <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+                    </button>
+                </div>
+                <div id="email-items-container" class="space-y-2 flex-1 overflow-y-auto pr-1 custom-scrollbar">
+                    <!-- Injected email list items -->
+                </div>
+            </div>
+
+            <!-- Email HTML Reader (8 cols) -->
+            <div class="lg:col-span-8 bg-darkbg-900/80 rounded-2xl border border-slate-800 flex flex-col h-[750px] lg:h-full overflow-hidden">
+                <div id="email-preview-header" class="px-5 py-3.5 bg-darkbg-850 border-b border-slate-800 flex items-center justify-between">
+                    <div>
+                        <h4 id="email-preview-subject" class="font-bold text-sm text-white">Select an email to view full dispatch</h4>
+                        <p id="email-preview-meta" class="text-xs text-slate-400 mt-0.5">Recipient &bull; Timestamp</p>
+                    </div>
+                    <span id="email-preview-status" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                        DELIVERED
+                    </span>
+                </div>
+                <div class="flex-1 bg-white p-2">
+                    <iframe id="email-iframe" class="w-full h-full border-0 rounded-lg" srcdoc="<div style='padding:40px;text-align:center;color:#64748b;font-family:sans-serif;'>No email selected yet. Complete an intern review evaluation to view the dual-dispatch email.</div>"></iframe>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- ========================================== -->
+        <!-- VIEW 3: ADMIN DASHBOARD                   -->
+        <!-- ========================================== -->
+        <div id="view-admin" class="hidden flex-1 space-y-6 overflow-y-auto pr-1 custom-scrollbar">
+            
+            <!-- KPI Cards -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="bg-darkbg-900/80 rounded-xl border border-slate-800 p-4 shadow-lg">
+                    <div class="flex items-center justify-between text-slate-400 text-xs mb-1">
+                        <span>Total Interns</span>
+                        <i data-lucide="users" class="w-4 h-4 text-brand-400"></i>
+                    </div>
+                    <div id="admin-kpi-interns" class="text-2xl font-black text-white">3</div>
+                    <div class="text-[11px] text-emerald-400 mt-1 flex items-center gap-1">
+                        <i data-lucide="check" class="w-3 h-3"></i> 100% Verified in Database
+                    </div>
+                </div>
+
+                <div class="bg-darkbg-900/80 rounded-xl border border-slate-800 p-4 shadow-lg">
+                    <div class="flex items-center justify-between text-slate-400 text-xs mb-1">
+                        <span>Active Reviews In-Flight</span>
+                        <i data-lucide="activity" class="w-4 h-4 text-indigo-400"></i>
+                    </div>
+                    <div id="admin-kpi-active-reviews" class="text-2xl font-black text-white">3</div>
+                    <div class="text-[11px] text-indigo-400 mt-1">10–15 Day Intervals Enforced</div>
+                </div>
+
+                <div class="bg-darkbg-900/80 rounded-xl border border-slate-800 p-4 shadow-lg">
+                    <div class="flex items-center justify-between text-slate-400 text-xs mb-1">
+                        <span>Evaluations Completed</span>
+                        <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-400"></i>
+                    </div>
+                    <div id="admin-kpi-completed-reviews" class="text-2xl font-black text-white">0</div>
+                    <div class="text-[11px] text-slate-400 mt-1">Avg Score: <strong id="admin-kpi-avg-score">--</strong></div>
+                </div>
+
+                <div class="bg-darkbg-900/80 rounded-xl border border-slate-800 p-4 shadow-lg">
+                    <div class="flex items-center justify-between text-slate-400 text-xs mb-1">
+                        <span>Emails Dispatched</span>
+                        <i data-lucide="send" class="w-4 h-4 text-purple-400"></i>
+                    </div>
+                    <div id="admin-kpi-emails" class="text-2xl font-black text-white">0</div>
+                    <div class="text-[11px] text-purple-400 mt-1">Dual Dispatch Pipeline</div>
+                </div>
+            </div>
+
+            <!-- Master Task & Parameters Configuration -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                
+                <!-- Master Task Upload / Editor (8 cols) -->
+                <div class="lg:col-span-8 bg-darkbg-900/80 rounded-2xl border border-slate-800 p-5 shadow-xl">
+                    <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="file-text" class="w-5 h-5 text-brand-400"></i>
+                            <div>
+                                <h3 class="font-bold text-sm text-white">Company Master Task &amp; Review Criteria</h3>
+                                <p class="text-xs text-slate-400">The AI Evaluation Engine strictly compares submitted GitHub repos against this spec.</p>
+                            </div>
+                        </div>
+                        <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-brand-500/20 text-brand-300 border border-brand-500/30">Active Specification</span>
+                    </div>
+
+                    <form id="master-task-form" onsubmit="handleMasterTaskSave(event)" class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-300 mb-1">Project Title</label>
+                            <input type="text" id="admin-task-title" class="w-full bg-slate-900 text-slate-100 rounded-lg px-3 py-2 text-xs border border-slate-700 focus:border-brand-500 focus:outline-none" required>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-300 mb-1">Project Scope &amp; Architecture</label>
+                            <textarea id="admin-task-scope" rows="3" class="w-full bg-slate-900 text-slate-100 rounded-lg px-3 py-2 text-xs border border-slate-700 focus:border-brand-500 focus:outline-none" required></textarea>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-300 mb-1">Project Objectives</label>
+                                <textarea id="admin-task-objectives" rows="3" class="w-full bg-slate-900 text-slate-100 rounded-lg px-3 py-2 text-xs border border-slate-700 focus:border-brand-500 focus:outline-none" required></textarea>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-300 mb-1">Required Tech Stack</label>
+                                <textarea id="admin-task-techstack" rows="3" class="w-full bg-slate-900 text-slate-100 rounded-lg px-3 py-2 text-xs border border-slate-700 focus:border-brand-500 focus:outline-none" required></textarea>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-300 mb-1">Submission Rules &amp; Guidelines</label>
+                            <textarea id="admin-task-rules" rows="2" class="w-full bg-slate-900 text-slate-100 rounded-lg px-3 py-2 text-xs border border-slate-700 focus:border-brand-500 focus:outline-none" required></textarea>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-300 mb-1">Stage-by-Stage Review Requirements (Master Rubric)</label>
+                            <textarea id="admin-task-rubric" rows="4" class="w-full bg-slate-900 text-slate-100 rounded-lg px-3 py-2 text-xs border border-slate-700 focus:border-brand-500 focus:outline-none font-mono" required></textarea>
+                        </div>
+
+                        <div class="flex items-center justify-end gap-3 pt-2">
+                            <span id="master-task-saved-msg" class="text-xs text-emerald-400 font-medium hidden">Saved &amp; Updated in System!</span>
+                            <button type="submit" class="bg-brand-600 hover:bg-brand-500 text-white font-bold px-4 py-2 rounded-lg text-xs transition-colors flex items-center gap-1.5 shadow">
+                                <i data-lucide="upload-cloud" class="w-4 h-4"></i>
+                                <span>Upload &amp; Activate Master Specification</span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Review Scheduling Engine Parameters (4 cols) -->
+                <div class="lg:col-span-4 space-y-5">
+                    <div class="bg-darkbg-900/80 rounded-2xl border border-slate-800 p-5 shadow-xl">
+                        <div class="flex items-center gap-2 pb-3 border-b border-slate-800 mb-4">
+                            <i data-lucide="sliders" class="w-4 h-4 text-purple-400"></i>
+                            <h3 class="font-bold text-sm text-white">Dynamic Scheduling Rules</h3>
+                        </div>
+
+                        <form id="settings-form" onsubmit="handleSettingsSave(event)" class="space-y-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-300 mb-1">Default Total Review Stages (n)</label>
+                                <input type="number" id="setting-total-reviews" min="2" max="8" value="4" class="w-full bg-slate-900 text-slate-100 rounded-lg px-3 py-2 text-xs border border-slate-700 focus:border-brand-500 focus:outline-none">
+                                <p class="text-[11px] text-slate-500 mt-1">Configures flexible review count (Review 1 up to Review n).</p>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-300 mb-1">Mandatory Inter-Review Gap (Days)</label>
+                                <input type="number" id="setting-gap-days" min="10" max="15" value="12" class="w-full bg-slate-900 text-slate-100 rounded-lg px-3 py-2 text-xs border border-slate-700 focus:border-brand-500 focus:outline-none">
+                                <p class="text-[11px] text-slate-400 mt-1">Strict rule: System clamps between <strong class="text-brand-300">10 and 15 days</strong>.</p>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-300 mb-1">Company / Organization Name</label>
+                                <input type="text" id="setting-company-name" value="Nexus Cloud Innovations" class="w-full bg-slate-900 text-slate-100 rounded-lg px-3 py-2 text-xs border border-slate-700 focus:border-brand-500 focus:outline-none">
+                            </div>
+
+                            <button type="submit" class="w-full bg-slate-800 hover:bg-slate-750 text-slate-200 font-bold px-3 py-2 rounded-lg text-xs transition-colors border border-slate-700">
+                                Update Scheduling Parameters
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Live Email Dispatch & SMTP Delivery Card -->
+                    <div class="bg-darkbg-900/80 rounded-2xl border border-slate-800 p-5 shadow-xl">
+                        <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-3">
+                            <div class="flex items-center gap-2">
+                                <i data-lucide="mail-check" class="w-4 h-4 text-emerald-400"></i>
+                                <h3 class="font-bold text-sm text-white">Live Student Email Dispatch (SMTP)</h3>
+                            </div>
+                            <span id="smtp-status-badge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700">Checking...</span>
+                        </div>
+
+                        <!-- Gmail App Password Guide Banner -->
+                        <div id="gmail-apppassword-guide" class="mb-3 bg-amber-950/40 border border-amber-500/30 rounded-xl p-3 text-[11px] leading-relaxed">
+                            <div class="flex items-center gap-1.5 font-bold text-amber-300 mb-1.5">
+                                <i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i>
+                                Gmail users: You MUST use an App Password — NOT your regular password
+                            </div>
+                            <ol class="text-amber-200/80 space-y-0.5 list-decimal list-inside">
+                                <li>Enable <strong>2-Step Verification</strong> at <a href="https://myaccount.google.com/security" target="_blank" class="underline text-amber-300">myaccount.google.com/security</a></li>
+                                <li>Go to <a href="https://myaccount.google.com/apppasswords" target="_blank" class="underline text-amber-300">myaccount.google.com/apppasswords</a></li>
+                                <li>Create a new App Password → select <em>Mail</em> + your device</li>
+                                <li>Copy the <strong>16-character code</strong> (no spaces) and paste it below</li>
+                            </ol>
+                        </div>
+
+                        <p class="text-[11px] text-slate-400 mb-3 leading-relaxed">
+                            Sends actual live emails to the student's real inbox whenever a review evaluation is performed or an invite is dispatched.
+                        </p>
+
+                        <!-- Preset Quick Buttons -->
+                        <div class="flex items-center gap-2 mb-3">
+                            <span class="text-[10px] text-slate-500 font-semibold">Preset:</span>
+                            <button type="button" onclick="applySmtpPreset('gmail')" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-750 text-slate-300 text-[10px] border border-slate-700">Gmail</button>
+                            <button type="button" onclick="applySmtpPreset('outlook')" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-750 text-slate-300 text-[10px] border border-slate-700">Outlook</button>
+                        </div>
+
+                        <form id="smtp-config-form" onsubmit="handleSmtpConfigSave(event)" class="space-y-3">
+                            <div class="grid grid-cols-3 gap-2">
+                                <div class="col-span-2">
+                                    <label class="block text-[11px] font-semibold text-slate-300 mb-0.5">SMTP Server / Host</label>
+                                    <input type="text" id="smtp-host" placeholder="smtp.gmail.com" oninput="onSmtpHostChange(this.value)" class="w-full bg-slate-900 text-slate-100 rounded-lg px-2.5 py-1.5 text-xs border border-slate-700 focus:border-brand-500 focus:outline-none" required>
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] font-semibold text-slate-300 mb-0.5">Port</label>
+                                    <input type="number" id="smtp-port" value="587" class="w-full bg-slate-900 text-slate-100 rounded-lg px-2.5 py-1.5 text-xs border border-slate-700 focus:border-brand-500 focus:outline-none" required>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-[11px] font-semibold text-slate-300 mb-0.5">Sender Gmail / Email Address</label>
+                                <input type="email" id="smtp-user" placeholder="your-team@gmail.com" class="w-full bg-slate-900 text-slate-100 rounded-lg px-2.5 py-1.5 text-xs border border-slate-700 focus:border-brand-500 focus:outline-none" required>
+                            </div>
+
+                            <div>
+                                <label class="block text-[11px] font-semibold text-slate-300 mb-0.5">
+                                    App Password
+                                    <span class="text-amber-400 font-normal">(16-char code, NOT your Gmail password)</span>
+                                </label>
+                                <div class="relative">
+                                    <input type="password" id="smtp-password" maxlength="32" placeholder="Paste 16-character App Password here"
+                                        oninput="validateAppPasswordLength(this)"
+                                        class="w-full bg-slate-900 text-slate-100 rounded-lg px-2.5 py-1.5 text-xs border border-slate-700 focus:border-brand-500 focus:outline-none pr-20">
+                                    <span id="smtp-pw-len-indicator" class="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-500"></span>
+                                </div>
+                                <span id="smtp-pw-warning" class="text-[10px] font-semibold mt-0.5 hidden block"></span>
+                            </div>
+
+                            <div>
+                                <label class="block text-[11px] font-semibold text-slate-300 mb-0.5">Display Sender Name</label>
+                                <input type="text" id="smtp-from-name" value="Nexus Review AI" class="w-full bg-slate-900 text-slate-100 rounded-lg px-2.5 py-1.5 text-xs border border-slate-700 focus:border-brand-500 focus:outline-none">
+                            </div>
+
+                            <div class="flex items-center gap-2 pt-1">
+                                <button type="submit" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 rounded-lg text-xs transition-colors flex items-center justify-center gap-1 shadow">
+                                    <i data-lucide="save" class="w-3.5 h-3.5"></i>
+                                    <span>Save &amp; Activate Live SMTP</span>
+                                </button>
+                            </div>
+                            <span id="smtp-saved-msg" class="text-[11px] text-emerald-400 font-medium block hidden text-center">✅ Settings saved! Live emails enabled.</span>
+                            <span id="smtp-error-msg" class="text-[11px] text-red-400 font-medium block hidden leading-relaxed"></span>
+                        </form>
+
+                        <!-- Send Live Test Email to Student/Intern -->
+                        <div class="mt-4 pt-3 border-t border-slate-800">
+                            <label class="block text-[11px] font-semibold text-slate-300 mb-1">Send Immediate Test Email to Student</label>
+                            <div class="flex gap-2">
+                                <input type="email" id="smtp-test-recipient" placeholder="student@gmail.com" class="flex-1 bg-slate-900 text-slate-100 rounded-lg px-2.5 py-1.5 text-xs border border-slate-700 focus:border-brand-500 focus:outline-none">
+                                <button type="button" id="btn-smtp-test" onclick="sendTestSmtpEmail()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-3 py-1.5 rounded-lg text-xs transition-colors shrink-0 flex items-center gap-1">
+                                    <i data-lucide="send" class="w-3 h-3"></i>
+                                    <span>Send Test</span>
+                                </button>
+                            </div>
+                            <span id="smtp-test-result-msg" class="text-[11px] mt-1.5 block hidden"></span>
+                        </div>
+                    </div>
+
+                    <!-- Company Meet Integration Notice -->
+                    <div class="bg-indigo-950/40 rounded-2xl border border-indigo-500/20 p-4">
+                        <div class="flex items-center gap-2 text-indigo-300 text-xs font-bold mb-1">
+                            <i data-lucide="video" class="w-4 h-4"></i>
+                            <span>Google Meet Link Generation</span>
+                        </div>
+                        <p class="text-[11px] text-slate-400 leading-relaxed">
+                            Each successive review stage computes a unique Google Meet link conforming to enterprise format <code class="text-indigo-300">https://meet.google.com/xxx-yyyy-zzz</code>.
+                        </p>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Intern Roster Table -->
+            <div class="bg-darkbg-900/80 rounded-2xl border border-slate-800 p-5 shadow-xl">
+                <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="database" class="w-4 h-4 text-emerald-400"></i>
+                        <h3 class="font-bold text-sm text-white">Registered Intern Database &amp; Progress</h3>
+                    </div>
+                    <button onclick="openRegistrationModal()" class="text-xs bg-brand-600 hover:bg-brand-500 text-white font-semibold px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1">
+                        <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                        <span>Add New Intern</span>
+                    </button>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs">
+                        <thead>
+                            <tr class="bg-slate-900/80 text-slate-400 border-b border-slate-800">
+                                <th class="p-3">Intern ID</th>
+                                <th class="p-3">Name</th>
+                                <th class="p-3">Email</th>
+                                <th class="p-3">Date of Joining (DOJ)</th>
+                                <th class="p-3">Current Stage</th>
+                                <th class="p-3">Status</th>
+                                <th class="p-3 text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admin-interns-table-body" class="divide-y divide-slate-800/60 text-slate-300">
+                            <!-- Injected rows -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- ========================================== -->
+    <!-- MODAL 1: REGISTER NEW INTERN               -->
+    <!-- ========================================== -->
+    <div id="modal-register" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+        <div class="bg-darkbg-900 rounded-2xl border border-slate-800 max-w-md w-full p-6 shadow-2xl relative">
+            <button onclick="closeRegistrationModal()" class="absolute right-4 top-4 text-slate-400 hover:text-white">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+            <div class="flex items-center gap-2 mb-4">
+                <div class="w-8 h-8 rounded-lg bg-brand-600/30 text-brand-400 flex items-center justify-center">
+                    <i data-lucide="user-plus" class="w-4 h-4"></i>
+                </div>
+                <div>
+                    <h3 class="font-bold text-base text-white">Register Intern Profile</h3>
+                    <p class="text-xs text-slate-400">Verifies into database and schedules N-reviews.</p>
+                </div>
+            </div>
+
+            <form id="register-intern-form" onsubmit="handleInternRegistration(event)" class="space-y-3.5">
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Full Name</label>
+                    <input type="text" id="reg-name" placeholder="e.g. Liam Zhang" required class="w-full bg-slate-900 text-slate-100 rounded-lg px-3 py-2 text-xs border border-slate-700 focus:border-brand-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Company / University Email</label>
+                    <input type="email" id="reg-email" placeholder="liam.zhang@nexusinnovations.tech" required class="w-full bg-slate-900 text-slate-100 rounded-lg px-3 py-2 text-xs border border-slate-700 focus:border-brand-500 focus:outline-none">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 mb-1">Role</label>
+                        <input type="text" id="reg-role" value="Full-Stack AI Intern" class="w-full bg-slate-900 text-slate-100 rounded-lg px-3 py-2 text-xs border border-slate-700 focus:border-brand-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 mb-1">Department</label>
+                        <input type="text" id="reg-dept" value="Engineering" class="w-full bg-slate-900 text-slate-100 rounded-lg px-3 py-2 text-xs border border-slate-700 focus:border-brand-500 focus:outline-none">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Official Date of Joining (DOJ)</label>
+                    <input type="date" id="reg-doj" class="w-full bg-slate-900 text-slate-100 rounded-lg px-3 py-2 text-xs border border-slate-700 focus:border-brand-500 focus:outline-none">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 mb-1">Total Reviews (n)</label>
+                        <input type="number" id="reg-total-reviews" min="2" max="6" value="4" class="w-full bg-slate-900 text-slate-100 rounded-lg px-3 py-2 text-xs border border-slate-700 focus:border-brand-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 mb-1">Gap Days (10-15)</label>
+                        <input type="number" id="reg-gap-days" min="10" max="15" value="12" class="w-full bg-slate-900 text-slate-100 rounded-lg px-3 py-2 text-xs border border-slate-700 focus:border-brand-500 focus:outline-none">
+                    </div>
+                </div>
+
+                <div class="pt-2 flex justify-end gap-2">
+                    <button type="button" onclick="closeRegistrationModal()" class="px-3 py-2 rounded-lg text-xs font-medium text-slate-400 hover:text-white bg-slate-800">Cancel</button>
+                    <button type="submit" class="px-4 py-2 rounded-lg text-xs font-bold text-white bg-brand-600 hover:bg-brand-500">Register &amp; Schedule Reviews</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- MODAL 2: INTERNSHIP COMPLETION CERTIFICATE -->
+    <!-- ========================================== -->
+    <div id="modal-certificate" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 overflow-y-auto">
+        <div class="bg-slate-950 border-4 border-amber-500/40 rounded-3xl max-w-2xl w-full p-8 shadow-2xl relative text-center text-slate-100 overflow-hidden">
+            <!-- Close button -->
+            <button onclick="closeCertificateModal()" class="absolute right-5 top-5 text-slate-400 hover:text-white p-1 rounded-full bg-slate-800">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+
+            <!-- Decorative Certificate Watermark -->
+            <div class="absolute -left-20 -bottom-20 w-64 h-64 bg-amber-500/5 rounded-full blur-3xl pointer-events-none"></div>
+
+            <div class="border-2 border-amber-500/20 rounded-2xl p-6 sm:p-8 bg-gradient-to-b from-darkbg-900 to-darkbg-950">
+                <div class="flex justify-center mb-3">
+                    <div class="w-16 h-16 rounded-full bg-amber-500/20 border-2 border-amber-400 flex items-center justify-center text-amber-300 shadow-lg">
+                        <i data-lucide="award" class="w-8 h-8"></i>
+                    </div>
+                </div>
+
+                <div class="text-[11px] uppercase tracking-widest text-amber-400 font-bold mb-1">
+                    CERTIFICATE OF MERIT &amp; COMPLETION
+                </div>
+                <h2 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight mb-2">
+                    NEXUS GLOBAL SYSTEMS
+                </h2>
+                <p class="text-xs text-slate-400 mb-6">Automated Engineering Internship Performance Review</p>
+
+                <p class="text-xs text-slate-300 italic mb-2">This is to officially certify that</p>
+                <div id="cert-intern-name" class="text-2xl font-black text-amber-300 font-serif mb-2">
+                    Aarav Sharma
+                </div>
+                <p class="text-xs text-slate-300 max-w-lg mx-auto leading-relaxed mb-6">
+                    has successfully cleared all <strong id="cert-reviews-count" class="text-white">4</strong> rigorous, multi-stage AI code evaluations and architectural milestone defenses for the project:
+                    <br/><span class="text-brand-300 font-semibold" id="cert-project-title">Enterprise Cloud-Native Microservices &amp; Real-time AI Analytics Engine</span>
+                </p>
+
+                <div class="grid grid-cols-3 gap-3 border-y border-slate-800 py-4 my-6 text-xs">
+                    <div>
+                        <div class="text-slate-500 text-[10px] uppercase">Date of Joining</div>
+                        <div id="cert-doj" class="font-bold text-slate-200 mt-0.5">2026-10-01</div>
+                    </div>
+                    <div>
+                        <div class="text-slate-500 text-[10px] uppercase">Final Cumulative Score</div>
+                        <div id="cert-final-score" class="font-bold text-emerald-400 text-sm mt-0.5">95/100 (Distinction)</div>
+                    </div>
+                    <div>
+                        <div class="text-slate-500 text-[10px] uppercase">Certificate ID</div>
+                        <div id="cert-id" class="font-mono text-slate-300 text-[11px] mt-0.5">CERT-AIRS-INT-101</div>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between pt-2 px-4">
+                    <div class="text-left">
+                        <div class="text-xs font-bold text-slate-200">Sarah Jenkins, Ph.D.</div>
+                        <div class="text-[10px] text-slate-500">Director of Systems &amp; Mentorship</div>
+                    </div>
+                    <div class="w-14 h-14 rounded-full border border-amber-500/40 flex items-center justify-center text-[9px] text-amber-400 font-mono tracking-tighter">
+                        OFFICIAL<br/>SEAL
+                    </div>
+                    <div class="text-right">
+                        <div class="text-xs font-bold text-slate-200">AI Review Committee</div>
+                        <div class="text-[10px] text-slate-500">Nexus Autonomous SDLC</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-5 flex justify-center gap-3">
+                <button onclick="window.print()" class="bg-slate-800 hover:bg-slate-700 text-white font-semibold text-xs px-4 py-2 rounded-xl border border-slate-700 flex items-center gap-2">
+                    <i data-lucide="printer" class="w-4 h-4"></i>
+                    <span>Print / Save PDF</span>
+                </button>
+                <button onclick="closeCertificateModal()" class="bg-brand-600 hover:bg-brand-500 text-white font-semibold text-xs px-5 py-2 rounded-xl">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden audio element for Neural TTS playback -->
+    <audio id="tts-audio-player" style="display:none;"></audio>
+
+    <!-- Scripts -->
+    <script src="/static/app.js"></script>
+    <script>
+        // Initialize Lucide icons on DOM ready
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+        });
+    </script>
+</body>
+</html>

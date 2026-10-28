@@ -1,0 +1,197 @@
+/* =====================================================
+   NEXUS REVIEW AI — Global Stylesheet
+   Light / Dark Mode + Spacing + Animation
+   ===================================================== */
+
+/* ---- Theme CSS Variables ---- */
+:root {
+    --bg-base:       #060913;
+    --bg-surface:    #0a0f1d;
+    --bg-card:       rgba(10,15,29,0.80);
+    --bg-header:     rgba(10,15,29,0.92);
+    --border-color:  rgba(51,65,85,0.80);
+    --text-primary:  #f1f5f9;
+    --text-muted:    #94a3b8;
+    --scrollbar-bg:  rgba(15,23,42,0.6);
+    --scrollbar-thumb: rgba(99,102,241,0.4);
+    --scrollbar-hover: rgba(99,102,241,0.7);
+}
+
+/* ---- Light Mode Overrides ---- */
+html.light {
+    --bg-base:       #f1f5f9;
+    --bg-surface:    #ffffff;
+    --bg-card:       rgba(255,255,255,0.95);
+    --bg-header:     rgba(255,255,255,0.96);
+    --border-color:  rgba(203,213,225,0.90);
+    --text-primary:  #0f172a;
+    --text-muted:    #475569;
+    --scrollbar-bg:  rgba(226,232,240,0.6);
+    --scrollbar-thumb: rgba(99,102,241,0.35);
+    --scrollbar-hover: rgba(99,102,241,0.65);
+}
+
+/* Apply theme vars to body */
+body {
+    background-color: var(--bg-base);
+    color: var(--text-primary);
+    transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+/* ---- Light mode surface patches ---- */
+html.light header,
+html.light .bg-darkbg-900\/90,
+html.light .bg-darkbg-900\/80,
+html.light .bg-darkbg-850,
+html.light .bg-darkbg-950 {
+    background-color: var(--bg-card) !important;
+}
+html.light .border-slate-800,
+html.light .border-slate-800\/80,
+html.light .border-slate-800\/90 {
+    border-color: var(--border-color) !important;
+}
+html.light .text-slate-100,
+html.light .text-slate-200,
+html.light .text-white {
+    color: #0f172a !important;
+}
+html.light .text-slate-300 { color: #1e293b !important; }
+html.light .text-slate-400 { color: #475569 !important; }
+html.light .text-slate-500 { color: #64748b !important; }
+html.light .bg-slate-900,
+html.light .bg-slate-900\/80,
+html.light .bg-slate-900\/60,
+html.light .bg-slate-900\/40,
+html.light .bg-slate-900\/70 {
+    background-color: rgba(241,245,249,0.90) !important;
+}
+html.light .bg-slate-800,
+html.light .bg-slate-800\/90,
+html.light .bg-slate-800\/80 {
+    background-color: rgba(226,232,240,0.85) !important;
+}
+html.light .border-slate-700,
+html.light .border-slate-700\/80 {
+    border-color: rgba(203,213,225,0.80) !important;
+}
+html.light .bg-darkbg-850 {
+    background-color: #f8fafc !important;
+}
+html.light .bg-brand-950\/40,
+html.light .bg-brand-950\/60 {
+    background-color: rgba(238,242,255,0.80) !important;
+}
+html.light .ring-darkbg-850 {
+    --tw-ring-color: #f8fafc !important;
+}
+html.light #chat-messages-container {
+    background-color: #f8fafc;
+}
+html.light .bg-darkbg-850.text-slate-100 {
+    background-color: #f1f5f9 !important;
+    color: #0f172a !important;
+}
+html.light #modal-certificate .bg-darkbg-900,
+html.light #modal-certificate .bg-darkbg-950,
+html.light #modal-register .bg-darkbg-900 {
+    background-color: #ffffff !important;
+}
+html.light .timeline-line {
+    background: #cbd5e1 !important;
+}
+
+/* ---- Custom Scrollbar ---- */
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: var(--scrollbar-bg);
+    border-radius: 9999px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border-radius: 9999px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-hover);
+}
+
+/* ---- Chat bubble animation ---- */
+.chat-bubble-enter {
+    animation: fadeInSlideUp 0.28s ease-out forwards;
+}
+@keyframes fadeInSlideUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ---- TTS audio bars ---- */
+@keyframes audioPulse {
+    0%, 100% { transform: scaleY(0.4); }
+    50%       { transform: scaleY(1); }
+}
+.audio-bar-1 { animation: audioPulse 0.8s ease-in-out infinite; }
+.audio-bar-2 { animation: audioPulse 0.8s ease-in-out 0.2s infinite; }
+.audio-bar-3 { animation: audioPulse 0.8s ease-in-out 0.4s infinite; }
+
+/* ---- Score ring ---- */
+.score-circle {
+    transition: stroke-dashoffset 0.8s ease-in-out;
+}
+
+/* ---- Glow ---- */
+.glow-brand {
+    box-shadow: 0 0 25px -5px rgba(99, 102, 241, 0.25);
+}
+
+/* ---- Timeline connector ---- */
+.timeline-line {
+    position: absolute;
+    left: 19px;
+    top: 36px;
+    bottom: -16px;
+    width: 2px;
+    background: #334155;
+    z-index: 1;
+}
+
+/* ---- Remove bottom gap in timeline card container ---- */
+#timeline-container {
+    padding-bottom: 0 !important;
+}
+#timeline-container > div:last-child {
+    margin-bottom: 0 !important;
+}
+
+/* ---- Dark mode badge/chip neutral override ---- */
+html.light .bg-slate-800.text-slate-400 {
+    background-color: #e2e8f0 !important;
+    color: #475569 !important;
+}
+html.light nav.bg-slate-900\/80 {
+    background-color: rgba(226,232,240,0.7) !important;
+    border-color: rgba(203,213,225,0.8) !important;
+}
+html.light .bg-gradient-to-r.from-brand-950\/40 {
+    background: linear-gradient(to right, rgba(238,242,255,0.7), rgba(241,245,249,0.9)) !important;
+}
+
+/* ---- Theme toggle button ---- */
+#btn-theme-toggle {
+    transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+/* ---- Print certificate ---- */
+@media print {
+    body * { visibility: hidden; }
+    #modal-certificate, #modal-certificate * { visibility: visible; }
+    #modal-certificate {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        background: transparent !important;
+    }
+}
